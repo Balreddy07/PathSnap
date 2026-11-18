@@ -1,104 +1,235 @@
-# PathSnap: Distributed Map-Matching & Route Reconstruction
+# PathSnap: Distributed Map-Matching & Route Reconstruction Using Machine Learning and Hidden Markov Models
 
 **Course:** UE24CS352A - Machine Learning  
 **Institution:** PES University, RR Campus, Department of Computer Science & Engineering  
-**Project:** PathSnap – ML Hackathon  
+**Project:** PathSnap – Machine Learning Hackathon  
+**Repository:** [https://github.com/Balreddy07/PathSnap](https://github.com/Balreddy07/PathSnap)  
+**Status:** All 5 Phases Completed, Tested, and Verified
 
 ---
 
 ## 1. Project Overview
 
-GPS tracking systems often produce inaccurate and noisy location coordinates due to urban canyons, multipath reflections, signal attenuation, GPS dropouts, and low sampling frequencies (~1 Hz). As a result, raw trajectories appear jagged, jump across buildings, or falsely snap to parallel streets.
+Real-world GPS logs suffer from severe multipath errors, urban canyon reflections, temporal dropouts, and non-uniform sampling rates. Traditional geometric snapping algorithms (such as closest-point projection) fail in dense street grids, frequently matching points to parallel alleys, wrong-way one-way streets, overpasses, or disconnected segments.
 
-**PathSnap** is an end-to-end distributed machine learning system designed to reconstruct realistic vehicle trajectories by matching noisy GPS observations to physical road networks.
+**PathSnap** is an end-to-end map-matching and route reconstruction system designed to reconstruct realistic, topologically continuous vehicle trajectories by matching noisy GPS observations to physical road networks.
 
 ### System Architecture
-The final system is deployed across a two-laptop distributed architecture:
-* **Laptop 1 (Backend & Inference Engine):** Hosts the trained classifier, HMM/Viterbi sequential route reconstruction decoder, road-network graph representations, and a FastAPI evaluation server.
-* **Laptop 2 (Evaluator Interface):** Hosts the evaluator-facing UI allowing interactive trip selection, real-time API query submission, and Leaflet/Folium geospatial visualization of reconstructed paths against ground truth.
+PathSnap operates as a hybrid spatial intelligence pipeline:
+1. **Local Spatial-Kinematic Classification (Phases 2–4):** A trained machine learning model (XGBoost / Random Forest) acts as an emission probability estimator $P(O_t \mid S_t)$, scoring candidate road arcs using an 11-dimensional engineered feature space capturing perpendicular distance, heading divergence, road curvature, speed dynamics, and trajectory progress.
+2. **Global Network Topology Sequence Decoding (Phase 5):** A Hidden Markov Model (HMM) solved via the Viterbi dynamic programming algorithm integrates directed road network shortest paths $d_{\text{net}}$ and GPS displacement $d_{\text{gps}}$ to decode the globally optimal, topologically continuous route sequence, eliminating physically impossible jumps.
+
+```
+[Raw GPS Trajectory (.track)]        [Raw Road Network (.nodes, .arcs)]
+              │                                      │
+              ▼                                      ▼
+    GPS Preprocessing                     Road Preprocessing
+ (Outlier Removal, Kinematics)        (Directed Graph, Segment Lengths)
+              │                                      │
+              └───────────────┬──────────────────────┘
+                              ▼
+                  Spatial Indexing (RTree / KDTree)
+                              │
+                              ▼
+                Top-K Candidate Road Arcs (k=10, r=50m)
+                              │
+                              ▼
+                  Feature Engineering (11 Features)
+                              │
+                              ▼
+             Optimized ML Classifier (XGBoost / RF)
+                 Local Emission Probabilities P(O_t | S_t)
+                              │
+                              ▼
+              Directed Road Network Topology Model
+                 Transition Probabilities P(S_t | S_{t-1})
+                              │
+                              ▼
+                 HMM / Viterbi Sequence Decoder
+                              │
+                              ▼
+              Continuous Reconstructed Road Route
+                              │
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+    Route Metrics Evaluation        Interactive Visualizations
+    (F1, Precision, Edit Dist)     (Folium HTML Maps, PNG Plots)
+```
 
 ---
 
-## 2. Project Repository Structure
+## 2. Benchmark Results
+
+### 2.1 Phase 3 – Machine Learning Models (Validation Set: 194,980 samples)
+
+| Rank | Model Architecture | Accuracy | Precision | Recall | F1-Score | ROC-AUC | PR-AUC | Training Time |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1** | **Random Forest** | 0.8812 | 0.5779 | 0.8238 | **0.6793** | **0.9353** | 0.7576 | 93.50 s |
+| **2** | **XGBoost** | 0.8739 | 0.5575 | **0.8470** | **0.6724** | 0.9345 | **0.7584** | **14.66 s** |
+| 3 | Multi-Layer Perceptron (MLP) | 0.8975 | 0.7117 | 0.5526 | 0.6221 | 0.9104 | 0.6859 | 74.20 s |
+| 4 | Support Vector Machine (LinearSVC) | **0.9017** | **0.7745** | 0.5030 | 0.6099 | 0.9234 | 0.7206 | 6.80 s |
+| 5 | Logistic Regression | 0.8274 | 0.4655 | 0.8773 | 0.6082 | 0.9237 | 0.7188 | 1.84 s |
+
+### 2.2 Phase 4 – Optuna Bayesian Optimization (GroupKFold CV)
+
+| Model Configuration | Accuracy | Precision | Recall | F1-Score | ROC-AUC | PR-AUC |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Random Forest (Baseline Phase 3) | 0.8812 | 0.5779 | 0.8238 | 0.6793 | **0.9353** | 0.7576 |
+| **Random Forest (Optimized Phase 4)** | **0.8947** | **0.6251** | 0.7759 | **0.6924** | 0.9332 | 0.7526 |
+| XGBoost (Baseline Phase 3) | 0.8739 | 0.5575 | **0.8470** | 0.6724 | 0.9345 | **0.7584** |
+| **XGBoost (Optimized Phase 4)** | 0.8770 | 0.5667 | 0.8269 | 0.6725 | 0.9310 | 0.7505 |
+
+### 2.3 Phase 5 – Route Reconstruction Benchmark (Validation Trips)
+
+| Method | Route Precision | Route Recall | Route F1-Score | Normalized Edit Distance |
+| :--- | :---: | :---: | :---: | :---: |
+| **Geometric Nearest Neighbor Baseline** | 70.05% | 61.69% | 0.6095 | 0.5393 (High zig-zagging) |
+| **ML-Only Snapping Baseline** | 78.15% | 66.74% | 0.6752 | 0.4844 (Disconnected arcs) |
+| **PathSnap Full System (XGBoost + HMM)** | **89.15%** | **64.40%** | **0.7187** | **0.4212** (Continuous route) |
+
+*Single-Trip Peak:* Trip `00000005` achieved **0.9073 Route F1**, **93.00% Precision**, and **0.1619 Normalized Edit Distance**.
+
+---
+
+## 3. Repository Structure
 
 ```
 PathSnap/
-├── data/                       # Dataset directory (excluded from Git tracking)
-│   ├── raw/                    # Raw trip partitions (.track, .nodes, .arcs, .route)
-│   └── processed/              # Cleaned tabular datasets and graph caches
-├── notebooks/                  # Interactive exploratory and evaluation notebooks
-│   └── 01_Dataset_Exploration.ipynb
-├── src/                        # Modular source code
-│   ├── __init__.py
-│   ├── data_loader.py          # Parsers for .track, .nodes, .arcs, .route files
-│   ├── data_validation.py      # Comprehensive coordinate, topology, and trajectory checks
-│   ├── dataset_statistics.py   # Dataset inventory, metrics, and aggregation
-│   ├── trajectory_analysis.py  # Sampling rate, displacement, geodesic velocity & anomalies
-│   ├── road_network_analysis.py# NetworkX directed graph analysis, connectivity, components
-│   ├── route_analysis.py       # Ground-truth arc sequence validation & continuity checks
-│   └── visualization.py        # Static distribution plots and interactive Folium maps
-├── outputs/                    # Output artifacts
-│   ├── csv/                    # Inventory, validation, and route statistics CSVs
-│   ├── graphs/                 # High-resolution EDA distribution plots
-│   ├── maps/                   # Standalone interactive Folium HTML map visualisations
-│   └── reports/                # Phase technical reports and markdown summaries
-├── requirements.txt            # Python environment dependencies
-├── .gitignore                  # Git exclusion rules (raw data, checkpoints, venvs)
-└── README.md                   # Project documentation and execution instructions
+├── configs/
+│   ├── preprocessing.yaml            # Phase 2 spatial indexing and feature configurations
+│   ├── phase3_models.yaml            # Phase 3 model hyperparameters and training parameters
+│   └── phase4_config.yaml            # Phase 4 Optuna GroupKFold search space
+├── data/
+│   ├── raw/train/                    # 80 authentic raw trip folders (.track, .nodes, .arcs, .route)
+│   └── processed/
+│       ├── train.csv                 # 1,034,891 training records across 64 trips
+│       └── val.csv                   # 194,980 validation records across 16 trips
+├── models/                           # Phase 3 serialized models and standard scalers
+│   ├── logistic_regression/
+│   ├── svm/
+│   ├── random_forest/
+│   ├── xgboost/
+│   └── mlp/
+├── notebooks/
+│   ├── 01_Dataset_Exploration.ipynb
+│   └── 03_Phase3_Model_Training_Evaluation.ipynb
+├── outputs/
+│   ├── phase3/                       # Phase 3 metrics, predictions, plots, reports
+│   ├── phase4/                       # Phase 4 Optuna histories, best params, optimized models
+│   │   ├── models/xgboost_optimized.pkl
+│   │   ├── models/random_forest_optimized.pkl
+│   │   └── reports/Phase4_Hyperparameter_Optimization_Report.md
+│   ├── phase5/                       # Phase 5 route reconstructions and visualizations
+│   │   ├── reconstructed_routes/     # Reconstructed route JSON files
+│   │   ├── visualizations/           # Interactive Folium HTML maps & PNG plots
+│   │   └── route_metrics/            # Comparative route evaluation CSVs
+│   └── reports/                      # Comprehensive technical reports
+│       ├── Phase1_EDA_Report.md
+│       ├── PathSnap_Final_Project_Report.md
+│       └── PathSnap_Final_Project_Summary.md
+├── src/
+│   ├── preprocessing/                # GPS kinematics, spatial index, candidates, road preprocessing
+│   ├── models/                       # 5 ML model implementations and trainers
+│   ├── optimization/                 # Optuna GroupKFold tuning (XGBoost & Random Forest)
+│   ├── hmm/                          # Emission probabilities, road network transitions, Viterbi
+│   ├── evaluation/                   # Route precision, recall, F1, Levenshtein edit distance
+│   └── visualizations/               # Multi-layer Folium maps and static 3-panel plots
+├── tests/                            # Comprehensive automated test suite (27 tests)
+├── run_pathsnap.py                   # Unified end-to-end command-line interface
+├── requirements.txt
+└── README.md
 ```
-
----
-
-## 3. Dataset Format
-
-Each trip is stored in an independent folder containing four whitespace-separated, headerless files:
-1. **`.track`**: Raw GPS observations `[longitude, latitude, timestamp_seconds]` sampled nominally at 1 Hz.
-2. **`.nodes`**: Road-network intersection coordinates `[longitude, latitude]`. The 0-based row index serves as `node_id`.
-3. **`.arcs`**: Directed road-network segments `[from_node_id, to_node_id]`. The 0-based row index serves as `arc_id`.
-4. **`.route`**: Chronological sequence of ground-truth `arc_id` values traversed by the vehicle.
 
 ---
 
 ## 4. Setup and Installation
 
 ### Prerequisites
-* Python 3.10+ (Recommended: Python 3.11 / 3.12 / 3.14)
-* Git
+* Python 3.10+ (Tested on Python 3.14)
+* Virtual environment tool (`venv`)
 
 ### Installation Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Balreddy07/PathSnap.git
-   cd PathSnap
-   ```
+```bash
+git clone https://github.com/Balreddy07/PathSnap.git
+cd PathSnap
 
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv .venv
-   # Windows:
-   .venv\Scripts\activate
-   # Linux / macOS:
-   source .venv/bin/activate
-   ```
+python -m venv .venv
+# On Windows:
+.venv\Scripts\activate
+# On Linux / macOS:
+source .venv/bin/activate
 
-3. Install required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+pip install -r requirements.txt
+```
 
 ---
 
-## 5. Execution Instructions (Phase 1 EDA)
+## 5. Execution Instructions
 
-To run the complete data inspection, validation, trajectory analysis, graph construction, and Folium map generation pipeline:
-
+### Run End-to-End Route Reconstruction (CLI)
 ```bash
-python -m src.data_loader
+# Reconstruct and visualize a specific validation trip (e.g. 00000081):
+python run_pathsnap.py --trip-id 00000081 --visualize
+
+# Evaluate across multiple validation trips:
+python run_pathsnap.py --evaluate --limit 5 --visualize
+
+# Use Random Forest instead of XGBoost:
+python run_pathsnap.py --trip-id 00000005 --model random_forest --visualize
 ```
 
-To explore interactively via Jupyter Notebook:
+### Run Model Training & Hyperparameter Optimization
 ```bash
-jupyter notebook notebooks/01_Dataset_Exploration.ipynb
+# Train and evaluate all 5 Phase 3 models:
+python src/models/train_all.py
+python src/models/evaluate_models.py
+python src/models/compare_models.py
+
+# Run Phase 4 Optuna Bayesian optimization:
+python src/optimization/run_phase4.py
 ```
 
-All generated tabular summaries, figures, maps, and technical reports are saved in the `outputs/` directory.
+### Run Distributed Two-Laptop Evaluation
+```bash
+# On Laptop 1 (Inference Server):
+python src/api/server.py --host 0.0.0.0 --port 8000
+
+# On Laptop 2 (Evaluator):
+# Open browser at: http://<LAPTOP_1_IP>:8000
+# Or run terminal client:
+python src/api/client.py --server http://<LAPTOP_1_IP>:8000 --trip-id 00000081
+```
+*Complete Step-by-Step Guide:* [docs/TWO_LAPTOP_DISTRIBUTED_SETUP_GUIDE.md](docs/TWO_LAPTOP_DISTRIBUTED_SETUP_GUIDE.md)
+
+### Run Test Suite
+```bash
+pytest tests/ -v
+# Output: 27 passed in ~43 seconds
+```
+
+---
+
+## 6. Visualizations
+
+Generated visualizations are stored under `outputs/phase5/visualizations/`:
+- **Interactive Multi-Layer Folium Map (`.html`):** Overlays raw GPS trajectory fixes, ground-truth route sequence, and reconstructed PathSnap route with toggleable layers.
+- **3-Panel Static Comparison Plot (`.png`):**
+  1. Panel 1: Raw GPS point scatter and trajectory.
+  2. Panel 2: Ground-truth road network sequence.
+  3. Panel 3: PathSnap Viterbi reconstruction overlaid on ground-truth with metric callouts.
+
+---
+
+## 7. Automated Test Suite Summary
+
+| Test Module | Coverage | Status |
+| :--- | :--- | :---: |
+| `tests/test_phase3_data_loading.py` | Config loading, CSV existence, 0 trip overlap, target derivation, positive rate | **PASSED (6/6)** |
+| `tests/test_phase3_features.py` | Feature presence, training-only scaling, no NaN/inf values | **PASSED (3/3)** |
+| `tests/test_phase3_target.py` | Target binary values, matching logic, non-matching logic | **PASSED (3/3)** |
+| `tests/test_phase3_no_leakage.py` | Strict leakage check on ground-truth and target columns | **PASSED (2/2)** |
+| `tests/test_phase3_evaluation.py` | Metrics values range, predictions consistency | **PASSED (4/4)** |
+| `tests/test_phase4_optimization.py` | Hyperparameter file existence, model loading, shape validation, comparison table | **PASSED (4/4)** |
+| `tests/test_phase5_hmm.py` | Emission normalization, transition calculation, Viterbi lattice decoding, edit distance | **PASSED (4/4)** |
+| `tests/test_end_to_end.py` | Full pipeline integration on authentic trip | **PASSED (1/1)** |
+| **TOTAL** | **27 Automated Tests** | **100% PASSED** |

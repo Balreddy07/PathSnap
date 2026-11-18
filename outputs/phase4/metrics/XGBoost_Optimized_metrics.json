@@ -1,0 +1,14 @@
+{
+  "model": "XGBoost_Optimized",
+  "accuracy": 0.877,
+  "precision": 0.5667,
+  "recall": 0.8269,
+  "f1": 0.6725,
+  "roc_auc": 0.931,
+  "pr_auc": 0.7505,
+  "train_time_s": 53.8,
+  "pred_time_s": 0.4146,
+  "positives": 29782,
+  "negatives": 165198,
+  "total_val": 194980
+}

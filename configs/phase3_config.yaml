@@ -1,0 +1,107 @@
+# configs/phase3_config.yaml
+# PathSnap Phase 3 – shared configuration for all five models
+
+data:
+  train_csv: "data/processed/train.csv"
+  val_csv:   "data/processed/val.csv"
+
+target:
+  # Binary target derived as: (candidate_arc_id == true_arc_id).astype(int)
+  column: "binary_target"
+  positive_class: 1
+  # Optional: exclude rows where distance_to_true_arc > threshold_m
+  # Set to null to disable filtering
+  distance_threshold_m: null
+
+features:
+  predictive:
+    - distance_to_candidate
+    - gps_speed
+    - gps_bearing
+    - road_bearing
+    - bearing_difference
+    - segment_length
+    - time_difference
+    - elapsed_time_ratio
+    - distance_from_start_km
+    - is_outlier
+    - is_stationary
+  exclude:
+    - trip_id
+    - gps_index
+    - timestamp
+    - gps_longitude
+    - gps_latitude
+    - candidate_arc_id
+    - candidate_rank
+    - label
+    - true_arc_id
+    - distance_to_true_arc
+    - split
+    - binary_target
+
+split:
+  seed: 42
+  train_trips: 64
+  val_trips: 16
+
+models:
+  output_dir: "models"
+  artifacts_dir: "outputs/phase3"
+
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+    solver: "lbfgs"
+    class_weight: "balanced"
+    random_state: 42
+    multi_class: "auto"
+
+  svm:
+    # LinearSVC used for scalability on large datasets
+    C: 1.0
+    class_weight: "balanced"
+    random_state: 42
+    max_iter: 2000
+
+  random_forest:
+    n_estimators: 200
+    max_depth: 15
+    min_samples_split: 2
+    min_samples_leaf: 1
+    class_weight: "balanced"
+    random_state: 42
+    n_jobs: -1
+
+  xgboost:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    random_state: 42
+    eval_metric: "logloss"
+    early_stopping_rounds: 20
+    verbosity: 0
+
+  mlp:
+    hidden_layer_sizes: [128, 64, 32]
+    activation: "relu"
+    solver: "adam"
+    learning_rate_init: 0.001
+    max_iter: 60
+    early_stopping: true
+    validation_fraction: 0.1
+    n_iter_no_change: 5
+    random_state: 42
+    batch_size: 512
+
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+    - roc_auc
+    - pr_auc
+  positive_label: 1

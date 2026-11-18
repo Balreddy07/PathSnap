@@ -1,0 +1,39 @@
+# configs/phase4_config.yaml
+# PathSnap Phase 4 - Hyperparameter Optimization Configuration
+
+data:
+  train_csv: "data/processed/train.csv"
+  val_csv: "data/processed/val.csv"
+
+cv:
+  n_splits: 3
+  group_column: "trip_id"
+  random_state: 42
+
+optimization:
+  n_trials_xgboost: 25
+  n_trials_rf: 15
+  metric: "f1"  # primary optimization target
+  direction: "maximize"
+
+search_spaces:
+  xgboost:
+    n_estimators: [150, 400]
+    max_depth: [4, 9]
+    learning_rate: [0.02, 0.2]
+    min_child_weight: [1, 7]
+    subsample: [0.6, 0.95]
+    colsample_bytree: [0.6, 0.95]
+    gamma: [0.0, 3.0]
+    reg_alpha: [1e-3, 10.0]
+    reg_lambda: [1e-3, 10.0]
+
+  random_forest:
+    n_estimators: [100, 250]
+    max_depth: [10, 20]
+    min_samples_split: [2, 10]
+    min_samples_leaf: [1, 5]
+    max_features: ["sqrt", "log2", 0.7]
+
+outputs:
+  base_dir: "outputs/phase4"

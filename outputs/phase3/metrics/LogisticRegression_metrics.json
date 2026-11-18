@@ -1,0 +1,14 @@
+{
+  "model": "LogisticRegression",
+  "accuracy": 0.8274,
+  "precision": 0.4655,
+  "recall": 0.8773,
+  "f1": 0.6082,
+  "roc_auc": 0.9237,
+  "pr_auc": 0.7188,
+  "train_time_s": 0.83,
+  "pred_time_s": 0.0165,
+  "positives": 29782,
+  "negatives": 165198,
+  "total_val": 194980
+}

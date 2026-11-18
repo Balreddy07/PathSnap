@@ -1,0 +1,14 @@
+{
+  "model": "RandomForest_Optimized",
+  "accuracy": 0.8947,
+  "precision": 0.6251,
+  "recall": 0.7759,
+  "f1": 0.6924,
+  "roc_auc": 0.9332,
+  "pr_auc": 0.7526,
+  "train_time_s": 200.24,
+  "pred_time_s": 0.8279,
+  "positives": 29782,
+  "negatives": 165198,
+  "total_val": 194980
+}

@@ -1,0 +1,12 @@
+,0
+distance_to_candidate,0.51031816
+bearing_difference,0.20616804
+segment_length,0.07748217
+gps_speed,0.05693711
+road_bearing,0.03669917
+gps_bearing,0.03377049
+distance_from_start_km,0.032014314
+elapsed_time_ratio,0.023900578
+time_difference,0.013294262
+is_outlier,0.007131241
+is_stationary,0.0022844223

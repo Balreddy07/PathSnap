@@ -1,0 +1,5 @@
+Model,Accuracy,Precision,Recall,F1,ROC-AUC,PR-AUC,Train Time (s)
+RandomForest (Baseline Phase 3),0.8812,0.5779,0.8238,0.6793,0.9353,0.7576,93.5
+RandomForest (Optimized Phase 4),0.8947,0.6251,0.7759,0.6924,0.9332,0.7526,200.24
+XGBoost (Baseline Phase 3),0.8739,0.5575,0.847,0.6724,0.9345,0.7584,14.66
+XGBoost (Optimized Phase 4),0.877,0.5667,0.8269,0.6725,0.931,0.7505,53.8

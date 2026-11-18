@@ -1,0 +1,14 @@
+{
+  "model": "SVM_Linear",
+  "accuracy": 0.9017,
+  "precision": 0.7745,
+  "recall": 0.503,
+  "f1": 0.6099,
+  "roc_auc": 0.9234,
+  "pr_auc": 0.7206,
+  "train_time_s": 6.8,
+  "pred_time_s": 0.1011,
+  "positives": 29782,
+  "negatives": 165198,
+  "total_val": 194980
+}

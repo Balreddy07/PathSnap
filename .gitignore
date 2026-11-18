@@ -81,3 +81,19 @@ ehthumbs.db
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Temporary execution logs and scratch files
+*.log
+*_log*.txt
+audit_log.txt
+dataset_gen_log.txt
+diagnose.py
+check_deps.py
+check_versions.py
+inspect_csv.py
+generate_dataset.py
+generate_notebook.py
+run_audit.py
+run_phase3.py
+.mplconfig/
+.pytest_cache/
