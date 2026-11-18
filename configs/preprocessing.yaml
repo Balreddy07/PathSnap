@@ -1,0 +1,46 @@
+# PathSnap Phase 2 Preprocessing & Feature Engineering Configuration
+
+dataset:
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  fallback_data_dir: "Student folder/Student folder"
+  partitions:
+    train: "train"
+    student_test: "student_test"
+
+splits:
+  train_val_split_ratio: 0.80  # 64 trips train, 16 trips validation
+  random_seed: 42
+
+gps_cleaning:
+  max_plausible_speed_mps: 45.0      # ~162 km/h; speeds above this are tagged as multipath outliers
+  max_plausible_displacement_m: 250.0# Displacements above this per 1s step are tagged as teleportation jumps
+  min_displacement_stationary_m: 0.5 # GPS noise while idling
+  drop_outliers_for_training: false  # Preserve all observations with an 'is_outlier' flag for traceability
+
+candidate_generation:
+  search_radius_meters: 50.0         # Spatial query radius around each GPS observation
+  max_candidates_k: 10               # Maximum candidate road arcs retained per observation
+  distance_metric: "orthogonal_segment" # Perpendicular distance to line segment (not midpoint or node)
+  candidate_buffer_factor: 1.5       # KD-tree candidate pre-fetch factor
+
+features:
+  numerical_cols:
+    - distance_to_candidate
+    - gps_speed
+    - gps_bearing
+    - road_bearing
+    - bearing_difference
+    - segment_length
+    - time_difference
+    - candidate_rank
+    - elapsed_time_ratio
+    - distance_from_start_km
+  id_cols:
+    - trip_id
+    - gps_index
+    - timestamp
+    - candidate_arc_id
+    - split
+  target_col:
+    - label
